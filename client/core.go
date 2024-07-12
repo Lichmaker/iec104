@@ -135,6 +135,12 @@ func (c *Client) SetServerActiveHandler(f func(c *Client)) {
 	})
 }
 
+func (c *Client) SetHeartbeatHandler(f func(c *Client)) {
+	c.client104.SetHeartbeatHandler(func(_ *cs104.Client) {
+		f(c)
+	})
+}
+
 func (c *Client) IsConnected() bool {
 	return c.client104.IsConnected()
 }
