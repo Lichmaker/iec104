@@ -98,6 +98,11 @@ func (c *Client) Connect() error {
 			c.onConnectHandler(c)
 		}
 	})
+	c.client104.SetConnectionLostHandler(func(cs *cs104.Client) {
+		if c.connectionLostHandler != nil {
+			c.connectionLostHandler(c)
+		}
+	})
 
 	select {
 	case <-doneChan:
@@ -137,6 +142,12 @@ func (c *Client) SetServerActiveHandler(f func(c *Client)) {
 
 func (c *Client) SetHeartbeatHandler(f func(c *Client)) {
 	c.client104.SetHeartbeatHandler(func(_ *cs104.Client) {
+		f(c)
+	})
+}
+
+func (c *Client) SetOnReconnectHandler(f func(c *Client)) {
+	c.client104.SetOnReconnectHandler(func(_ *cs104.Client) {
 		f(c)
 	})
 }
