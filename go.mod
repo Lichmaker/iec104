@@ -7,4 +7,4 @@ require (
 	github.com/wendy512/go-iecp5 v1.2.3
 )
 
-replace github.com/wendy512/go-iecp5 => github.com/lichmaker/go-iecp5 v0.0.0-20240723054816-ffbae8e5a648
+replace github.com/wendy512/go-iecp5 => github.com/lichmaker/go-iecp5 v0.0.0-20240723060048-e50f84e86c1b
