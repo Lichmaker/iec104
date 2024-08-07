@@ -18,7 +18,7 @@ type Client struct {
 	client104             *cs104.Client
 	settings              *Settings
 	onConnectHandler      func(c *Client)
-	connectionLostHandler func(c *Client)
+	onConnectionLostHandler func(c *Client)
 }
 
 // Settings 连接配置
@@ -99,8 +99,8 @@ func (c *Client) Connect() error {
 		}
 	})
 	c.client104.SetConnectionLostHandler(func(cs *cs104.Client) {
-		if c.connectionLostHandler != nil {
-			c.connectionLostHandler(c)
+		if c.onConnectionLostHandler != nil {
+			c.onConnectionLostHandler(c)
 		}
 	})
 
@@ -128,10 +128,8 @@ func (c *Client) SetOnConnectHandler(f func(c *Client)) {
 	c.onConnectHandler = f
 }
 
-func (c *Client) SetConnectionLostHandler(f func(c *Client)) {
-	c.client104.SetConnectionLostHandler(func(_ *cs104.Client) {
-		f(c)
-	})
+func (c *Client) SetOnConnectionLostHandler(f func(c *Client)) {
+	c.onConnectionLostHandler = f
 }
 
 func (c *Client) SetServerActiveHandler(f func(c *Client)) {
