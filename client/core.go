@@ -6,7 +6,10 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"sync/atomic"
 	"time"
+
+	"github.com/wendy512/iec104/pkg/waitgroup"
 
 	"github.com/spf13/cast"
 	"github.com/wendy512/go-iecp5/asdu"
@@ -15,10 +18,9 @@ import (
 )
 
 type Client struct {
-	client104             *cs104.Client
-	settings              *Settings
-	onConnectHandler      func(c *Client)
-	onConnectionLostHandler func(c *Client)
+	client104               *cs104.Client
+	settings                *Settings
+	onConnectHandler        func(c *Client)
 }
 
 // Settings 连接配置
@@ -85,33 +87,25 @@ func (c *Client) Connect() error {
 		return err
 	}
 
-	var connected bool
-	doneChan := make(chan struct{})
+	wg := &waitgroup.WaitGroup{}
+	wg.Add(1)
+	// 标记是不是第一次
+	var firstConnect atomic.Bool
 	// 连接状态事件
 	c.client104.SetOnConnectHandler(func(cs *cs104.Client) {
-		cs.SendStartDt()
-		if !connected { // 检查是否已经标记为已连接
-			close(doneChan)  // 关闭done channel
-			connected = true // 标记为已连接
+		if firstConnect.CompareAndSwap(false, true) {
+			wg.Done()
 		}
+		cs.SendStartDt()
 		if c.onConnectHandler != nil {
 			c.onConnectHandler(c)
 		}
 	})
-	c.client104.SetConnectionLostHandler(func(cs *cs104.Client) {
-		if c.onConnectionLostHandler != nil {
-			c.onConnectionLostHandler(c)
-		}
-	})
 
-	select {
-	case <-doneChan:
-		// 连接成功
-		return nil
-	case <-time.After(c.settings.Cfg104.ConnectTimeout0):
-		// 连接超时
+	if err := wg.WaitTimeout(c.settings.Cfg104.ConnectTimeout0); err != nil {
 		return fmt.Errorf("connection timeout of %f seconds", c.settings.Cfg104.ConnectTimeout0.Seconds())
 	}
+	return nil
 }
 
 func (c *Client) Close() error {
@@ -124,14 +118,19 @@ func (c *Client) SetLogCfg(cfg LogCfg) {
 	c.client104.SetLogProvider(cfg.LogProvider)
 }
 
+// SetOnConnectHandler 连接成功后回调，如果连接断开重新连接上也会回调，所以存在多次调用的情况
 func (c *Client) SetOnConnectHandler(f func(c *Client)) {
 	c.onConnectHandler = f
 }
 
-func (c *Client) SetOnConnectionLostHandler(f func(c *Client)) {
-	c.onConnectionLostHandler = f
+// SetConnectionLostHandler 连接断开后回调，如果连接重复断开也会回调，所以存在多次调用的情况
+func (c *Client) SetConnectionLostHandler(f func(c *Client)) {
+	c.client104.SetConnectionLostHandler(func(_ *cs104.Client) {
+		f(c)
+	})
 }
 
+// SetServerActiveHandler 激活确认后回调，如果连接断开重新连接上也会回调，所以存在多次调用的情况
 func (c *Client) SetServerActiveHandler(f func(c *Client)) {
 	c.client104.SetServerActiveHandler(func(_ *cs104.Client) {
 		f(c)
@@ -382,6 +381,8 @@ func newClientOption(settings *Settings) *cs104.ClientOption {
 	}
 	if settings.Params == nil {
 		opts.SetParams(asdu.ParamsWide)
+	} else {
+		opts.SetParams(settings.Params)
 	}
 	opts.SetAutoReconnect(settings.AutoConnect)
 	opts.SetReconnectInterval(settings.ReconnectInterval)
