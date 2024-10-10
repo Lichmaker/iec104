@@ -18,9 +18,9 @@ import (
 )
 
 type Client struct {
-	client104               *cs104.Client
-	settings                *Settings
-	onConnectHandler        func(c *Client)
+	client104        *cs104.Client
+	settings         *Settings
+	onConnectHandler func(c *Client)
 }
 
 // Settings 连接配置
@@ -169,6 +169,20 @@ func (c *Client) SendCmd(addr uint16, typeId asdu.TypeID, ioa asdu.InfoObjAddr, 
 			InSelect: false,
 		},
 		t: time.Now(),
+	}
+
+	return c.doSend(cmd)
+}
+
+// 发送遥控指令
+func (c *Client) SendControlCmd(addr uint16, typeId asdu.TypeID, ioa asdu.InfoObjAddr, value any, qoc asdu.QualifierOfCommand) error {
+	cmd := &command{
+		typeId: typeId,
+		ioa:    ioa,
+		ca:     asdu.CommonAddr(addr),
+		value:  value,
+		qoc:    qoc,
+		t:      time.Now(),
 	}
 
 	return c.doSend(cmd)
