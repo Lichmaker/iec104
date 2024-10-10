@@ -48,6 +48,7 @@ type command struct {
 	qoc    asdu.QualifierOfCommand
 	qos    asdu.QualifierOfSetpointCmd
 	value  any
+	cot    *asdu.CauseOfTransmission
 }
 
 func NewSettings() *Settings {
@@ -175,7 +176,7 @@ func (c *Client) SendCmd(addr uint16, typeId asdu.TypeID, ioa asdu.InfoObjAddr, 
 }
 
 // 发送遥控指令
-func (c *Client) SendControlCmd(addr uint16, typeId asdu.TypeID, ioa asdu.InfoObjAddr, value any, qoc asdu.QualifierOfCommand) error {
+func (c *Client) SendControlCmd(addr uint16, typeId asdu.TypeID, ioa asdu.InfoObjAddr, value any, qoc asdu.QualifierOfCommand, cot *asdu.CauseOfTransmission) error {
 	cmd := &command{
 		typeId: typeId,
 		ioa:    ioa,
@@ -183,6 +184,7 @@ func (c *Client) SendControlCmd(addr uint16, typeId asdu.TypeID, ioa asdu.InfoOb
 		value:  value,
 		qoc:    qoc,
 		t:      time.Now(),
+		cot:    cot,
 	}
 
 	return c.doSend(cmd)
@@ -229,6 +231,9 @@ func (c *Client) doSend(cmd *command) error {
 		return NotConnected
 	}
 	coa := activationCoa()
+	if cmd.cot != nil {
+		coa = *cmd.cot
+	}
 	var err error
 
 	switch cmd.typeId {
