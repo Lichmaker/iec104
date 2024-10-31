@@ -7,4 +7,6 @@ require (
 	github.com/wendy512/go-iecp5 v1.2.3
 )
 
+require github.com/pkg/errors v0.9.1
+
 replace github.com/wendy512/go-iecp5 => github.com/lichmaker/go-iecp5 v0.0.0-20241009011646-51328ba5ead4

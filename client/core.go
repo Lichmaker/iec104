@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/wendy512/iec104/pkg/waitgroup"
 
 	"github.com/spf13/cast"
@@ -371,11 +372,14 @@ func activationCoa() asdu.CauseOfTransmission {
 
 // testConnect 测试端口连通性
 func (c *Client) testConnect() error {
-	url, _ := url.Parse(formatServerUrl(c.settings))
+	url, err := url.Parse(formatServerUrl(c.settings))
 	var (
 		conn net.Conn
-		err  error
 	)
+
+	if err != nil {
+		return errors.Wrap(err, "url parse failed.")
+	}
 
 	timeout := c.settings.Cfg104.ConnectTimeout0
 	switch url.Scheme {
